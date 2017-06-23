@@ -33,11 +33,16 @@ public class OptionInputSource implements InputSource {
             .acceptsAll(Arrays.asList("o", "output-dir"), "The output directory.").withRequiredArg()
             .withValuesConvertedBy(new PathConverter(PathProperties.DIRECTORY_EXISTING)).defaultsTo(Paths.get("./out"));
     private static final OptionSpec<Path> SOURCEPATH = PARSER
-            .acceptsAll(Arrays.asList("sourcepath"), "The source path that contains Java files with referenced classes.").withOptionalArg()
-            .withValuesConvertedBy(new PathConverter(PathProperties.DIRECTORY_EXISTING)).withValuesSeparatedBy(File.pathSeparator);
+            .acceptsAll(Arrays.asList("sourcepath"),
+                    "The source path that contains Java files with referenced classes.")
+            .withOptionalArg()
+            .withValuesConvertedBy(new PathConverter(PathProperties.DIRECTORY_EXISTING))
+            .withValuesSeparatedBy(File.pathSeparator);
     private static final OptionSpec<Path> CLASSPATH = PARSER
-            .acceptsAll(Arrays.asList("classpath"), "The class path that contains JARs with referenced classes.").withOptionalArg()
-            .withValuesConvertedBy(new PathConverter(PathProperties.FILE_EXISTING)).withValuesSeparatedBy(File.pathSeparator);
+            .acceptsAll(Arrays.asList("classpath"), "The class path that contains JARs with referenced classes.")
+            .withOptionalArg()
+            .withValuesConvertedBy(new PathConverter(PathProperties.FILE_EXISTING))
+            .withValuesSeparatedBy(File.pathSeparator);
 
     private final Path inputFile;
     private final Path outputDirectory;

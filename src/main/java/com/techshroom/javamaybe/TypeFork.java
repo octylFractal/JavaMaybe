@@ -31,7 +31,7 @@ public abstract class TypeFork {
      * The "then" part of a type fork.
      */
     public abstract TypeForkPath getPrimaryPath();
-    
+
     public final Set<Type> getPrimaryTypes(String parameter) {
         return getPrimaryPath().resolveTypesOfParameter(parameter);
     }
@@ -40,7 +40,7 @@ public abstract class TypeFork {
      * The "else" part of a type fork. Not required.
      */
     public abstract Optional<TypeForkPath> getSecondaryPath();
-    
+
     public final Set<Type> getSecondaryTypes(String parameter) {
         return getSecondaryPath().map(p -> p.resolveTypesOfParameter(parameter)).orElse(ImmutableSet.of());
     }

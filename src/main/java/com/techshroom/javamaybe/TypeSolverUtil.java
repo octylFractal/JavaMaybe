@@ -25,7 +25,7 @@ public class TypeSolverUtil {
         }, null);
     }
     private static final WeakHashMap<JavaParserFacade, Type> SOLVED_OBJECT = new WeakHashMap<>();
-    
+
     public static Type getType(Node node, JavaParserFacade typeSolver) {
         return runtimeType(typeSolver.getType(node), typeSolver);
     }

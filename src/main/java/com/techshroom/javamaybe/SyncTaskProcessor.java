@@ -3,6 +3,7 @@ package com.techshroom.javamaybe;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -15,6 +16,7 @@ import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.visitor.ModifierVisitor;
 import com.github.javaparser.ast.visitor.Visitable;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
@@ -40,17 +42,28 @@ public class SyncTaskProcessor implements TaskProcessor {
     public CompletableFuture<CompilationUnit> process(Task task) {
         CompilationUnit unit = task.getUnit();
 
-        unit.accept(new MethodSplitterVisitor(typeSolver), null);
+        unit.accept(new AnyReplacementVisitor(typeSolver), null);
 
         return CompletableFuture.completedFuture(unit);
     }
 
-    private static final class MethodSplitterVisitor extends ModifierVisitor<Void> {
+    private static final class AnyReplacementVisitor extends ModifierVisitor<Void> {
 
         private final JavaParserFacade typeSolver;
 
-        public MethodSplitterVisitor(JavaParserFacade typeSolver) {
+        public AnyReplacementVisitor(JavaParserFacade typeSolver) {
             this.typeSolver = typeSolver;
+        }
+
+        @Override
+        public Visitable visit(MethodCallExpr n, Void arg) {
+            // any method calls to Any.wrap?
+            Optional<String> scopeName = NodeUtil.getScopeNameOfMCE(n);
+            if (scopeName.isPresent() && scopeName.get().equals("Any") && n.getNameAsString().equals("wrap")) {
+                // yep!
+                return n.getArgument(0);
+            }
+            return super.visit(n, arg);
         }
 
         @Override

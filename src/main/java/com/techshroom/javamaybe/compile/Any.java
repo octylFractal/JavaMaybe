@@ -2,6 +2,10 @@ package com.techshroom.javamaybe.compile;
 
 public interface Any {
 
+    static Any wrap(Object object) {
+        return null;
+    }
+
     // fake fork!
     boolean typeFork();
 
@@ -12,7 +16,8 @@ public interface Any {
     <T> T as(Class<T> type);
 
     // for sticking the type in a constant somewhere
-    // esp. if long like ImmutableMultimap<String, String>, can be shortened to just "MAP"
+    // esp. if long like ImmutableMultimap<String, String>, can be shortened to
+    // just "MAP"
     <T> T as(TypeCap<T> type);
 
 }

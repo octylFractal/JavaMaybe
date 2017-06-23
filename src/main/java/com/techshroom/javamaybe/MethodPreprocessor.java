@@ -30,7 +30,7 @@ public class MethodPreprocessor {
                     endOfChain.get().setElseStmt(sub);
                     break;
                 }
-             }
+            }
         });
         TypeDeclaration<?> decl = (TypeDeclaration<?>) method.getParentNode().get();
         decl.getMembers().replace(method, copy);

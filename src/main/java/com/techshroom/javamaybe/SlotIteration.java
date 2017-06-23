@@ -19,8 +19,8 @@ public final class SlotIteration<T> implements Iterable<List<T>> {
             map.put(slot, item);
             return this;
         }
-        
-        public Builder <T> addItemsToSlot(Iterable<T> items, int slot) {
+
+        public Builder<T> addItemsToSlot(Iterable<T> items, int slot) {
             map.putAll(slot, items);
             return this;
         }
@@ -40,7 +40,7 @@ public final class SlotIteration<T> implements Iterable<List<T>> {
     private SlotIteration(ImmutableListMultimap<Integer, T> slots) {
         this.slots = Multimaps.asMap(slots);
     }
-    
+
     public Map<Integer, List<T>> getSlots() {
         return this.slots;
     }

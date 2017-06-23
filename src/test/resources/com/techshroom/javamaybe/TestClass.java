@@ -1,7 +1,11 @@
 package com.techshroom.javamaybe;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 
+import com.google.common.collect.ImmutableList;
 import com.techshroom.javamaybe.compile.Any;
 
 public class TestClass {
@@ -20,6 +24,24 @@ public class TestClass {
             return 1;
         }
 
+    }
+
+    public static void main(String[] args) {
+        System.err.println(copyOf(Any.wrap(Arrays.asList("1", "2", "3"))));
+        Iterable<String> iterable = Arrays.asList("a", "b", "c")::iterator;
+        System.err.println(copyOf(Any.wrap(iterable)));
+        Iterator<String> iterator = Arrays.asList("that", "is", "how", "easy", "it", "is").iterator();
+        System.err.println(copyOf(Any.wrap(iterator)));
+    }
+
+    public static <E> ImmutableList<E> copyOf(Any source) {
+        if (source.typeFork()) {
+            return ImmutableList.copyOf(source.<Iterable<E>> as());
+        } else if (source.typeFork()) {
+            return ImmutableList.copyOf(source.<Iterator<E>> as());
+        } else {
+            return ImmutableList.copyOf(source.<Collection<E>> as());
+        }
     }
 
     public int sporkInTheRoad(Any target) {
