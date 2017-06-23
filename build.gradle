@@ -1,0 +1,124 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            cacheChangingModulesFor 0, 'seconds'
+        }
+    }
+    dependencies {
+        classpath group: 'com.techshroom', name: 'Aversion', version: '3.0.0'
+        classpath "gradle.plugin.nl.javadude.gradle.plugins:license-gradle-plugin:0.14.0"
+        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'aversion-util'
+apply plugin: 'aversion-maven'
+apply plugin: 'aversion-apt'
+apply plugin: "com.github.hierynomus.license"
+
+license {
+    ext {
+        name = project.name
+        organization = project.organization
+        url = project.url
+    }
+    header = rootProject.file('HEADER.txt')
+    ignoreFailures = false
+    strictCheck = true
+    include '**/*.java'
+    mapping {
+        java = 'SLASHSTAR_STYLE'
+    }
+}
+
+util {
+    javaVersion = '1.8'
+}
+
+mavencfg {
+    coords 'TechShroom', 'JavaMaybe'
+    description 'Java, Maybe. Type helper for generics.'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+}
+configurations.all {
+    resolutionStrategy {
+        // fail eagerly on version conflict (includes transitive dependencies)
+        // e.g. multiple different versions of the same dependency (group and name are equal)
+        failOnVersionConflict()
+
+        // force certain versions of dependencies (including transitive)
+        force 'com.google.guava:guava:22.0',
+              'com.google.code.findbugs:jsr305:3.0.1',
+              'com.github.javaparser:javaparser-core:3.2.8'
+
+        cacheDynamicVersionsFor 10, 'minutes'
+        // don't cache changing modules at all
+        cacheChangingModulesFor 0, 'seconds'
+    }
+}
+dependencies {
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+    compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+
+    compile group: 'net.sf.jopt-simple', name: 'jopt-simple', version: '5.0.3'
+    compile group: 'com.github.javaparser', name: 'javaparser-core', version: '3.2.8'
+    compile group: 'com.github.javaparser', name: 'java-symbol-solver-core', version: '0.5.5'
+    compile group: 'com.squareup.okio', name: 'okio', version: '1.3.0'
+    compile group: 'com.googlecode.combinatoricslib', name: 'combinatoricslib', version: '2.1'
+
+    def guice = [group: 'com.google.inject', name: 'guice', version: '4.1.0']
+    if (project.hasProperty('debugging')) {
+        println("Using Guice no_aop for debugging!")
+        guice['classifier'] = 'no_aop'
+    }
+    compile guice
+
+    compileOnly group: 'com.techshroom', name: 'jsr305-plus', version: '0.0.1'
+    addAPTReqWComp group: 'com.google.guava', name: 'guava', version: '22.0'
+    addAPT group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc3'
+    addAPT group: 'com.google.auto.value', name: 'auto-value', version: '1.4.1'
+    addAPTReq name: 'aopalliance'
+    addAPTReq name: 'asm'
+    addAPTReq name: 'auto-value'
+    addAPTReq name: 'auto-common'
+    addAPTReq name: 'cglib'
+    addAPTReq name: 'commons-collections'
+    addAPTReq name: 'commons-lang'
+    addAPTReq name: 'dagger'
+    addAPTReq name: 'javawriter'
+    addAPTReq name: 'javax.inject'
+    addAPTReq name: 'velocity'
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+configure([compileJava, compileTestJava]) {
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-processing', '-Xlint:-path']
+    options.deprecation = true
+    options.encoding = 'UTF-8'
+    options.incremental = true
+    options.fork = true
+}

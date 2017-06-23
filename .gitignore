@@ -1,0 +1,6 @@
+/.apt_generated/
+/bin/
+/out/
+/libs/
+.gradle/
+build/
