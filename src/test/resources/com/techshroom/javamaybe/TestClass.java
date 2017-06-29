@@ -51,11 +51,11 @@ public class TestClass {
     }
 
     public static void main(String[] args) {
-        System.err.println(copyOf(Any.wrap(Arrays.asList("1", "2", "3"))));
+        System.err.println(copyOf((Any) Arrays.asList("1", "2", "3")));
         Iterable<String> iterable = Arrays.asList("a", "b", "c")::iterator;
-        System.err.println(copyOf(Any.wrap(iterable)));
+        System.err.println(copyOf((Any) iterable));
         Iterator<String> iterator = Arrays.asList("that", "is", "how", "easy", "it", "is").iterator();
-        System.err.println(copyOf(Any.wrap(iterator)));
+        System.err.println(copyOf((Any) iterator));
     }
 
     public static <E> ImmutableList<E> copyOf(Any source) {

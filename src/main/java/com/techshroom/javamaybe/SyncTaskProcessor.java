@@ -27,7 +27,6 @@ package com.techshroom.javamaybe;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,7 +39,7 @@ import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.visitor.ModifierVisitor;
 import com.github.javaparser.ast.visitor.Visitable;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
@@ -80,12 +79,12 @@ public class SyncTaskProcessor implements TaskProcessor {
         }
 
         @Override
-        public Visitable visit(MethodCallExpr n, Void arg) {
-            // any method calls to Any.wrap?
-            Optional<String> scopeName = NodeUtil.getScopeNameOfMCE(n);
-            if (scopeName.isPresent() && scopeName.get().equals("Any") && n.getNameAsString().equals("wrap")) {
+        public Visitable visit(CastExpr n, Void arg) {
+            // any casts to Any?
+            Type type = typeSolver.getType(n);
+            if (type.isReferenceType() && type.asReferenceType().getQualifiedName().equals(Any.class.getName())) {
                 // yep!
-                return n.getArgument(0);
+                return n.getExpression();
             }
             return super.visit(n, arg);
         }

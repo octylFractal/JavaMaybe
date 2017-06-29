@@ -26,10 +26,6 @@ package com.techshroom.javamaybe.compile;
 
 public interface Any {
 
-    static Any wrap(Object object) {
-        return null;
-    }
-
     // fake fork!
     boolean typeFork();
 
