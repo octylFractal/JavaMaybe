@@ -27,6 +27,7 @@ package com.techshroom.javamaybe;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,7 +41,6 @@ import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
 import com.github.javaparser.symbolsolver.model.typesystem.Type;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.techshroom.javamaybe.compile.Any;
 
 /**
  * A path in a fork. There is one encompassing the entire method. Each path can
@@ -50,34 +50,26 @@ import com.techshroom.javamaybe.compile.Any;
 public final class TypeForkPath {
 
     public static TypeForkPath construct(JavaParserFacade typeSolver, MethodDeclaration source) {
-        return new TypeForkPath(null, typeSolver,
-                source.getParameters().stream()
-                        .map(Parameter::getNameAsString)
-                        .collect(ImmutableList.toImmutableList()),
-                source.getParameters().stream()
-                        .filter(p -> {
-                            Type t = typeSolver.getType(p);
-                            return t.isReferenceType()
-                                    && t.asReferenceType().getQualifiedName().equals(Any.class.getName());
-                        })
-                        .map(Parameter::getNameAsString)
-                        .collect(ImmutableSet.toImmutableSet()));
+        return new TypeForkPath(null, typeSolver, source.getParameters());
     }
 
     @Nullable
     private final TypeForkPath parent;
     private final JavaParserFacade typeSolver;
+    private final Collection<Parameter> originalParameters;
     private final ImmutableList<String> parameters;
-    private final ImmutableSet<String> anyParams;
+    private final Set<String> anyParams = new HashSet<>();
     private final Map<String, Type> parameterTypes = new HashMap<>();
     private final List<TypeFork> forks = new ArrayList<>();
 
-    private TypeForkPath(@Nullable TypeForkPath parent, JavaParserFacade typeSolver, Collection<String> parameters,
-            Collection<String> anyParams) {
+    private TypeForkPath(@Nullable TypeForkPath parent, JavaParserFacade typeSolver, Collection<Parameter> parameters) {
         this.parent = parent;
         this.typeSolver = typeSolver;
-        this.parameters = ImmutableList.copyOf(parameters);
-        this.anyParams = ImmutableSet.copyOf(anyParams);
+        this.originalParameters = parameters;
+        this.parameters = parameters.stream().map(Parameter::getNameAsString).collect(ImmutableList.toImmutableList());
+        parameters.forEach(p -> {
+            parameterTypes.put(p.getNameAsString(), typeSolver.getType(p));
+        });
     }
 
     public JavaParserFacade getTypeSolver() {
@@ -88,7 +80,7 @@ public final class TypeForkPath {
         return parameters;
     }
 
-    public ImmutableSet<String> getAnyParams() {
+    public Set<String> getAnyParams() {
         return anyParams;
     }
 
@@ -131,9 +123,6 @@ public final class TypeForkPath {
                     type.describe() + " is not a subtype of parent type " + parentParams.describe());
         }
         parameterTypes.compute(parameter, (k, existing) -> {
-            if (existing == null) {
-                return type;
-            }
             if (existing.isAssignableBy(type)) {
                 return type;
             }
@@ -150,7 +139,7 @@ public final class TypeForkPath {
     }
 
     public TypeForkPath createSubPath() {
-        return new TypeForkPath(this, typeSolver, parameters, anyParams);
+        return new TypeForkPath(this, typeSolver, originalParameters);
     }
 
 }

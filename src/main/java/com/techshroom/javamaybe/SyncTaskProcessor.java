@@ -24,10 +24,11 @@
  */
 package com.techshroom.javamaybe;
 
+import java.util.BitSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
@@ -39,7 +40,6 @@ import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.visitor.ModifierVisitor;
 import com.github.javaparser.ast.visitor.Visitable;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
@@ -47,10 +47,8 @@ import com.github.javaparser.symbolsolver.model.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.model.typesystem.Type;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
-import com.techshroom.javamaybe.compile.Any;
 
 public class SyncTaskProcessor implements TaskProcessor {
 
@@ -65,7 +63,8 @@ public class SyncTaskProcessor implements TaskProcessor {
     public CompletableFuture<CompilationUnit> process(Task task) {
         CompilationUnit unit = task.getUnit();
 
-        unit.accept(new AnyReplacementVisitor(typeSolver), null);
+        unit = (CompilationUnit) unit.accept(new AnyReplacementVisitor(typeSolver), null);
+        unit = (CompilationUnit) unit.accept(new CompileOnlyCleanupVisitor(typeSolver), new HashSet<>());
 
         return CompletableFuture.completedFuture(unit);
     }
@@ -76,17 +75,6 @@ public class SyncTaskProcessor implements TaskProcessor {
 
         public AnyReplacementVisitor(JavaParserFacade typeSolver) {
             this.typeSolver = typeSolver;
-        }
-
-        @Override
-        public Visitable visit(CastExpr n, Void arg) {
-            // any casts to Any?
-            Type type = typeSolver.getType(n);
-            if (type.isReferenceType() && type.asReferenceType().getQualifiedName().equals(Any.class.getName())) {
-                // yep!
-                return n.getExpression();
-            }
-            return super.visit(n, arg);
         }
 
         @Override
@@ -116,35 +104,32 @@ public class SyncTaskProcessor implements TaskProcessor {
 
         private void splitMethod(TypeDeclaration<?> decl, MethodDeclaration method) {
             MethodDeclaration m = MethodPreprocessor.process(method);
-            SlotIteration.Builder<Parameter> iteration = SlotIteration.builder();
             List<String> parameters =
                     m.getParameters().stream().map(Parameter::getNameAsString).collect(ImmutableList.toImmutableList());
-            Set<String> anyParams = m.getParameters().stream()
-                    .filter(p -> {
-                        Type t = typeSolver.getType(p);
-                        return t.isReferenceType()
-                                && t.asReferenceType().getQualifiedName().equals(Any.class.getName());
-                    })
-                    .map(Parameter::getNameAsString)
-                    .collect(ImmutableSet.toImmutableSet());
-            if (anyParams.isEmpty()) {
-                return;
-            }
-            for (int i = 0; i < parameters.size(); i++) {
-                if (!anyParams.contains(parameters.get(i))) {
-                    iteration.addItemToSlot(m.getParameter(i), i);
-                }
-            }
 
             // ASTPrinter.print(m);
 
+            System.err.println(m.getNameAsString() + ":");
             TypeForkPath ctx = TypeForkPath.construct(typeSolver, m);
             m.accept(new BuildTypeFork(), ctx);
 
+            if (ctx.getAnyParams().isEmpty()) {
+                // no type forks here!
+                return;
+            }
+
             SlotIteration.Builder<Type> paramTypeIterBuilder = SlotIteration.builder();
-            anyParams.forEach(param -> {
+            BitSet params = new BitSet();
+            params.set(0, parameters.size());
+            ctx.getAnyParams().forEach(param -> {
                 int index = parameters.indexOf(param);
+                params.clear(index);
                 paramTypeIterBuilder.addItemsToSlot(ctx.resolveTypesOfParameter(param), index);
+            });
+
+            params.stream().forEach(unsetParamIndex -> {
+                paramTypeIterBuilder.addItemToSlot(typeSolver.getType(m.getParameter(unsetParamIndex)),
+                        unsetParamIndex);
             });
 
             for (List<Type> types : paramTypeIterBuilder.build()) {

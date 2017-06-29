@@ -24,15 +24,19 @@
  */
 package com.techshroom.javamaybe;
 
+import java.util.List;
 import java.util.WeakHashMap;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
+import com.github.javaparser.symbolsolver.model.declarations.TypeParameterDeclaration.Bound;
 import com.github.javaparser.symbolsolver.model.typesystem.Type;
+import com.github.javaparser.symbolsolver.model.typesystem.TypeVariable;
 
 public class TypeSolverUtil {
 
@@ -51,11 +55,29 @@ public class TypeSolverUtil {
     private static final WeakHashMap<JavaParserFacade, Type> SOLVED_OBJECT = new WeakHashMap<>();
 
     public static Type getType(Node node, JavaParserFacade typeSolver) {
-        return runtimeType(typeSolver.getType(node), typeSolver);
+        return runtimeType(node, typeSolver.getType(node), typeSolver);
     }
 
-    public static Type runtimeType(Type type, JavaParserFacade typeSolver) {
+    public static Type runtimeType(Node ctx, Type type, JavaParserFacade typeSolver) {
         if (type.isTypeVariable()) {
+            // Try replacing with the var, if it's there
+            if (ctx.getParentNode().filter(VariableDeclarator.class::isInstance).isPresent()) {
+                VariableDeclarator vd = (VariableDeclarator) ctx.getParentNode().get();
+                type = typeSolver.getType(vd);
+                if (!type.isTypeVariable()) {
+                    return type;
+                }
+            }
+            // if (any)
+            // Try replacing the type variable with its bound
+            TypeVariable tvar = type.asTypeVariable();
+            List<Bound> bounds = tvar.asTypeParameter().getBounds(typeSolver.getTypeSolver());
+            if (bounds.size() > 1) {
+                System.err.println("Warning: more than 1 bound, there may be errors!");
+            }
+            if (bounds.size() > 0) {
+                return bounds.get(0).getType();
+            }
             return SOLVED_OBJECT.computeIfAbsent(typeSolver, t -> t.getType(OBJECT_REFERENCE));
         }
         return type;

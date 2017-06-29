@@ -28,9 +28,11 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.techshroom.javamaybe.compile.Any;
+import com.techshroom.javamaybe.compile.TypeCap;
 
 public class TestClass {
 
@@ -51,60 +53,73 @@ public class TestClass {
     }
 
     public static void main(String[] args) {
-        System.err.println(copyOf((Any) Arrays.asList("1", "2", "3")));
+        System.err.println(copyOf(Arrays.asList("1", "2", "3")));
         Iterable<String> iterable = Arrays.asList("a", "b", "c")::iterator;
-        System.err.println(copyOf((Any) iterable));
+        System.err.println(copyOf(iterable));
         Iterator<String> iterator = Arrays.asList("that", "is", "how", "easy", "it", "is").iterator();
-        System.err.println(copyOf((Any) iterator));
+        System.err.println(copyOf(iterator));
+        System.err.println(new TestClass().sporkInTheRoad(new Fork()));
     }
 
-    public static <E> ImmutableList<E> copyOf(Any source) {
-        if (source.typeFork()) {
-            return ImmutableList.copyOf(source.<Iterable<E>> as());
-        } else if (source.typeFork()) {
-            return ImmutableList.copyOf(source.<Iterator<E>> as());
+    public static <E> ImmutableList<E> copyOf(Object source) {
+        if (Any.typeFork(source)) {
+            return ImmutableList.copyOf(Any.<Iterable<E>> from(source));
+        } else if (Any.typeFork(source)) {
+            return ImmutableList.copyOf(Any.<Iterator<E>> from(source));
         } else {
-            return ImmutableList.copyOf(source.<Collection<E>> as());
+            return ImmutableList.copyOf(Any.<Collection<E>> from(source));
         }
     }
 
-    public int sporkInTheRoad(Any target) {
-        if (target.typeFork()) {
-            return target.<Number> as().intValue();
-        } else if (target.typeFork()) {
-            return target.<Integer> as();
+    public int sporkInTheRoad(Object target) {
+        if (Any.typeFork(target)) {
+            return Any.<Number> from(target).intValue();
+        } else if (Any.typeFork(target)) {
+            return Any.<Integer> from(target);
         }
-        return target.typeFork() ? target.<Fork> as().getProngs() : target.<Spoon> as().getCurvature();
+        return Any.typeFork(target) ? Any.<Fork> from(target).getProngs() : Any.<Spoon> from(target).getCurvature();
     }
 
-    public void numberToIL(Any nTIL) {
+    public void numberToIL(Object nTIL) {
         // initially cast as Number, later specialized as Integer and Long
         // Here, the end parameters should be Integer and Long
-        Number number = nTIL.as();
-        long someLong = nTIL.typeFork() ? nTIL.<Integer> as() : nTIL.<Long> as();
+        Number number = Any.convert(nTIL);
+        long someLong = Any.typeFork(nTIL) ? Any.<Integer> from(nTIL) : Any.<Long> from(nTIL);
         System.err.println(number + " == " + someLong);
     }
 
-    public void numberToL(Any nTL) {
+    public void numberToL(Object nTL) {
         // initially number, end as long
-        Number number = nTL.<Number> as();
-        long someLong = nTL.<Long> as();
+        Number number = Any.convert(nTL);
+        long someLong = Any.convert(nTL);
         System.err.println(number + " == " + someLong);
     }
 
-    public void numberToNL(Any nTNL) {
+    public void numberToNL(Object nTNL) {
         // initially number, re-cast as number and long
-        Number number = nTNL.<Number> as();
-        long someLong = nTNL.typeFork() ? nTNL.<Number> as().longValue() : nTNL.<Long> as();
+        Number number = Any.convert(nTNL);
+        long someLong = Any.typeFork(nTNL) ? Any.<Number> from(nTNL).longValue() : Any.<Long> from(nTNL);
         System.err.println(number + " == " + someLong);
     }
 
-    public BigInteger largeMod(Any number, Any divisor) {
-        BigInteger numberInt = number.typeFork() ? BigInteger.valueOf(number.<Number> as().longValue())
-                : new BigInteger(number.<String> as());
-        BigInteger divInt = divisor.typeFork() ? BigInteger.valueOf(divisor.<Number> as().longValue())
-                : new BigInteger(divisor.<String> as());
+    public BigInteger largeMod(Object number, Object divisor) {
+        BigInteger numberInt = getBigInteger(number);
+        BigInteger divInt = getBigInteger(divisor);
         return numberInt.mod(divInt);
+    }
+
+    private static final BigInteger getBigInteger(Object number) {
+        return Any.typeFork(number) ? BigInteger.valueOf(Any.<Number> from(number).longValue())
+                : new BigInteger(Any.<String> from(number));
+    }
+
+    private static final TypeCap<Map<BigInteger, BigInteger>> MOD_MAP_TYPE = new TypeCap<>();
+
+    public BigInteger largeModCached(Object cache) {
+        if (Any.typeFork(cache)) {
+            return Any.<Map<String, BigInteger>> from(cache).get("1");
+        }
+        return Any.to(MOD_MAP_TYPE, cache).get(BigInteger.ONE);
     }
 
 }

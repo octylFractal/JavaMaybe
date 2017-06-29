@@ -26,18 +26,32 @@ package com.techshroom.javamaybe.compile;
 
 public interface Any {
 
-    // fake fork!
-    boolean typeFork();
+    // uses type inference, usable with variables
+    static <T> T convert(Object in) {
+        return null;
+    }
 
     // uses type inference, usable with variables
-    <T> T as();
+    // this form usually is used as Any.<Number>from(var)
+    // this reads as "number from var"
+    static <T> T from(Object in) {
+        return null;
+    }
 
     // uses stricter type inference, for in-line cases
-    <T> T as(Class<T> type);
+    static <T> T to(Class<T> type, Object in) {
+        return null;
+    }
 
     // for sticking the type in a constant somewhere
     // esp. if long like ImmutableMultimap<String, String>, can be shortened to
     // just "MAP"
-    <T> T as(TypeCap<T> type);
+    static <T> T to(TypeCap<T> type, Object in) {
+        return null;
+    }
+
+    static boolean typeFork(Object varTarget) {
+        return false;
+    }
 
 }

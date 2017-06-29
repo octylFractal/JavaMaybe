@@ -28,6 +28,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -40,34 +41,48 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
+import com.google.common.collect.ImmutableSet;
 
 public class NodeUtil {
 
+    private static final Set<String> AS_CALLS = ImmutableSet.of("from", "to", "convert");
+
+    private static boolean isAsCall(MethodCallExpr mce) {
+        if (mce.getScope()
+                .filter(NameExpr.class::isInstance)
+                .map(NameExpr.class::cast)
+                .filter(ne -> ne.getNameAsString().equals("Any")).isPresent()
+                && AS_CALLS.contains(mce.getNameAsString())) {
+            return true;
+        }
+        return false;
+    }
+
+    private static int getArgAsCall(MethodCallExpr mce) {
+        return mce.getNameAsString().equals("to") ? 1 : 0;
+    }
+
     public static boolean isAsCall(MethodCallExpr mce, String param) {
-        return getScopeNameOfMCE(mce).filter(Predicate.isEqual(param)).isPresent()
-                && mce.getNameAsString().equals("as");
+        return isAsCall(mce)
+                && getScopeNameOfMCE(mce, getArgAsCall(mce)).filter(Predicate.isEqual(param)).isPresent();
     }
 
     public static Optional<String> getScopeNameIfAs(MethodCallExpr mce) {
-        if (mce.getNameAsString().equals("as")) {
-            return mce.getScope().filter(NameExpr.class::isInstance)
-                    .map(NameExpr.class::cast)
-                    .map(NameExpr::getNameAsString);
+        if (isAsCall(mce)) {
+            return getScopeNameOfMCE(mce, getArgAsCall(mce));
         }
         return Optional.empty();
     }
 
     public static Optional<String> getScopeNameIfFork(MethodCallExpr mce) {
         if (mce.getNameAsString().equals("typeFork")) {
-            return mce.getScope().filter(NameExpr.class::isInstance)
-                    .map(NameExpr.class::cast)
-                    .map(NameExpr::getNameAsString);
+            return getScopeNameOfMCE(mce, 0);
         }
         return Optional.empty();
     }
 
-    public static Optional<String> getScopeNameOfMCE(MethodCallExpr mce) {
-        return mce.getScope()
+    public static Optional<String> getScopeNameOfMCE(MethodCallExpr mce, int arg) {
+        return Optional.of(mce.getArgument(arg))
                 .filter(NameExpr.class::isInstance)
                 .map(NameExpr.class::cast)
                 .map(NameExpr::getNameAsString);

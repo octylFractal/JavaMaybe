@@ -44,7 +44,7 @@ public class BuildTypeFork extends VoidVisitorAdapter<TypeForkPath> {
             return Optional.empty();
         }
         MethodCallExpr mce = (MethodCallExpr) e;
-        return NodeUtil.getScopeNameIfFork(mce).filter(ctx.getAnyParams()::contains);
+        return NodeUtil.getScopeNameIfFork(mce);
     }
 
     @Override
@@ -52,6 +52,7 @@ public class BuildTypeFork extends VoidVisitorAdapter<TypeForkPath> {
         // param.as(/* args */)
         Optional<String> param = NodeUtil.getScopeNameIfAs(n);
         if (param.isPresent()) {
+            ctx.getAnyParams().add(param.get());
             ctx.putType(param.get(), TypeSolverUtil.getType(n, ctx.getTypeSolver()));
         } else {
             super.visit(n, ctx);
@@ -82,6 +83,7 @@ public class BuildTypeFork extends VoidVisitorAdapter<TypeForkPath> {
     }
 
     private void addForkPaths(UnifiedConditional cond, String param, TypeForkPath ctx) {
+        ctx.getAnyParams().add(param);
         TypeForkPath primary = createForkPath(cond.getThen(), param, ctx);
         Optional<TypeForkPath> secondary = cond.getElse().map(node -> createForkPath(node, param, ctx));
         ctx.getForks().add(TypeFork.create(cond, primary, secondary.orElse(null)));
